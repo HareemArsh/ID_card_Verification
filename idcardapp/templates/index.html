@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ID Card Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .nav-bar {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            text-align: right;
+        }
+
+        .nav-bar a {
+            color: #fff;
+            margin-left: 10px;
+            text-decoration: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #333;
+            color: #fff;
+        }
+
+        th, td {
+            border-bottom: 1px solid #ddd;
+        }
+
+        td {
+            vertical-align: top;
+        }
+
+        p {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 20px;
+            padding: 12px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        img {
+            max-width: 100%;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0px 0px 5px #999;
+        }
+
+        form {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        label {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .selected-file {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .scanned-info-container {
+            margin-top: 20px;
+        }
+
+        .scanned-info-container h2 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .scanned-info-container table {
+            display: none;
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .scanned-info-container th, .scanned-info-container td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        .scanned-info-container th {
+            background-color: #333;
+            color: #fff;
+        }
+
+        .scanned-info-container th, .scanned-info-container td {
+            border-bottom: 1px solid #ddd;
+        }
+
+        .scanned-info-container img {
+            max-width: 100px;
+            max-height: 100px;
+        }
+
+        .show-records-btn {
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        {% if user.is_authenticated %}
+            Welcome, {{ user.username }}! <a href="{% url 'logout' %}">Logout</a>
+        {% else %}
+            <a href="{% url 'login' %}">Login</a> | <a href="{% url 'register' %}">Register</a>
+        {% endif %}
+    </div>
+    <h1>ID Card Verification</h1>
+    <div class="selected-file" id="selectedFile">No file selected</div>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="imageInput">Choose an image</label>
+        <input type="file" name="image" id="imageInput" onchange="displayFileName()">
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if id_card_number %}
+        <table>
+            <tr>
+                <th>ID Card Number</th>
+                <th>Name</th>
+                <th>Father's Name</th>
+                <th>Date of Birth</th>
+            </tr>
+            <tr>
+                <td>{{ id_card_number }}</td>
+                <td>{{ name }}</td>
+                <td>{{ father_name }}</td>
+                <td>{{ date_of_birth }}</td>
+            </tr>
+        </table>
+
+        {% if image_url %}
+            <img src="{{ image_url }}" alt="ID Card Image">
+        {% endif %}
+    {% else %}
+        <p>No ID Card information available.</p>
+    {% endif %}
+
+    {% if scanned_id_cards %}
+        <div class="scanned-info-container">
+            <h2>Scanned ID Card Information</h2>
+            <div class="show-records-btn">
+                <button onclick="toggleRecords()">Previous Records</button>
+            </div>
+            <table id="scannedInfoTable">
+                <tr>
+                    <th>ID Card Number</th>
+                    <th>Name</th>
+                    <th>Father's Name</th>
+                    <th>Date of Birth</th>
+                    <th>Image</th>
+                </tr>
+                {% for card in scanned_id_cards %}
+                <tr>
+                    <td>{{ card.id_card_number }}</td>
+                    <td>{{ card.name }}</td>
+                    <td>{{ card.father_name }}</td>
+                    <td>{{ card.date_of_birth }}</td>
+                    <td>
+                        {% if card.image %}
+                            <img src="{{ card.image.url }}" alt="ID Card Image">
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    {% endif %}
+
+    <script>
+        function displayFileName() {
+            const fileInput = document.getElementById('imageInput');
+            const selectedFile = document.getElementById('selectedFile');
+            selectedFile.innerText = fileInput.files[0].name;
+        }
+
+        function toggleRecords() {
+            const scannedInfoTable = document.getElementById('scannedInfoTable');
+            if (scannedInfoTable.style.display === 'none') {
+                scannedInfoTable.style.display = 'table';
+            } else {
+                scannedInfoTable.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
